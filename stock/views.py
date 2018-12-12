@@ -39,7 +39,14 @@ class tt:
         while enddate.year - startdate.year > 6:
             print(startdate.strftime('%Y%m%d'),
                   (startdate.replace(year=(startdate.year + 6)) - timedelta(days=1)).strftime('%Y%m%d'))
-            t = self._pro.index_daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=(
+            if ts_code == '510300.SH':
+                t = self._pro.fund_daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=(
+                    startdate.replace(year=(startdate.year + 6)) - timedelta(days=1)).strftime('%Y%m%d'))
+            elif ts_code.startswith('6'):
+                t = self._pro.daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=(
+                        startdate.replace(year=(startdate.year + 6)) - timedelta(days=1)).strftime('%Y%m%d'))
+            else:
+                t = self._pro.index_daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=(
                         startdate.replace(year=(startdate.year + 6)) - timedelta(days=1)).strftime('%Y%m%d'))
             if not df.empty:
                 df = pd.concat([df, t], axis=0)
@@ -48,7 +55,13 @@ class tt:
             startdate = startdate.replace(year=(startdate.year + 6))
         else:
             print(startdate.strftime('%Y%m%d'), end_date)
-            t = self._pro.index_daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=end_date)
+            if ts_code == '510300.SH':
+                t = self._pro.fund_daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=end_date)
+            elif ts_code.startswith('6'):
+                t = self._pro.daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=(
+                        startdate.replace(year=(startdate.year + 6)) - timedelta(days=1)).strftime('%Y%m%d'))
+            else:
+                t = self._pro.index_daily(ts_code=ts_code, start_date=startdate.strftime('%Y%m%d'), end_date=end_date)
             if not df.empty:
                 df = pd.concat([df, t], axis=0)
             else:
@@ -155,26 +168,69 @@ class tt:
 
     def evaluate(self, x_test, y_test):
         # 评估模型
-        loss, accuracy = t._model.evaluate(x_test, y_test)
+        loss, accuracy = self._model.evaluate(x_test, y_test)
         print('test loss', loss)
         print('test accuracy', accuracy)
         return loss, accuracy
 
-    def build_x(self, df, series_len, start):
+    def build_x(self, df, series_len, start, fieldnamelist):
         '''
         构建预测序列
 
         series_len: 参考的之前的序列范围。如以之前的series_len个序列预测下一个序列，则series_len=series_len
         '''
-        ll = list()
-        l1 = list(df['close_1'])
-        l4 = list(df['vol_1'])
-        l5 = list(df['amount_1'])
+        final_list = list()
+        # x = np.array([i[0] for i in ll2])
+        #
+        # ll = list()
+        # for f in fieldnamelist:
+        #     final_list.append(list(df[f]))
+        # l1 = list(df['close_1'])
+        # l4 = list(df['vol_1'])
+        # l5 = list(df['amount_1'])
         for i in range(df.shape[0] - start, df.shape[0]):
-            final_list = list()
-            l2 = l1[i - series_len: i]
-            ll.append(list(zip(l1[i - series_len: i], l4[i - series_len: i], l5[i - series_len: i])))
-        return ll
+            final_list.append(df[fieldnamelist].values[(i - series_len): i])
+
+        final_list.append(df[fieldnamelist].values[(i - series_len+1):])
+            # l2 = l1[i - series_len: i]
+            # if len(fieldnamelist) == 2:
+            #     ll.append(list(zip(final_list[0][(i - series_len): i], final_list[1][(i - series_len): i])))
+            # elif len(fieldnamelist) == 3:
+            #     ll.append(list(zip(final_list[0][(i - series_len): i],
+            #                        final_list[1][(i - series_len): i],
+            #                        final_list[2][(i - series_len): i]
+            #                        )))
+            # elif len(fieldnamelist) == 4:
+            #     ll.append(list(zip(final_list[0][(i - series_len): i],
+            #                        final_list[1][(i - series_len): i],
+            #                        final_list[2][(i - series_len): i],
+            #                        final_list[3][(i - series_len): i]
+            #                        )))
+            # elif len(fieldnamelist) == 5:
+            #     ll.append(list(zip(final_list[0][(i - series_len): i],
+            #                        final_list[1][(i - series_len): i],
+            #                        final_list[2][(i - series_len): i],
+            #                        final_list[3][(i - series_len): i],
+            #                        final_list[4][(i - series_len): i]
+            #                        )))
+            # elif len(fieldnamelist) == 6:
+            #     ll.append(list(zip(final_list[0][(i - series_len): i],
+            #                        final_list[1][(i - series_len): i],
+            #                        final_list[2][(i - series_len): i],
+            #                        final_list[3][(i - series_len): i],
+            #                        final_list[4][(i - series_len): i],
+            #                        final_list[5][(i - series_len): i]
+            #                        )))
+            # elif len(fieldnamelist) == 7:
+            #     ll.append(list(zip(final_list[0][(i - series_len): i],
+            #                        final_list[1][(i - series_len): i],
+            #                        final_list[2][(i - series_len): i],
+            #                        final_list[3][(i - series_len): i],
+            #                        final_list[4][(i - series_len): i],
+            #                        final_list[5][(i - series_len): i],
+            #                        final_list[6][(i - series_len): i]
+            #                        )))
+        return np.array(final_list)
 
     def predict(self, x_list):
         '''
